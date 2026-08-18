@@ -1,0 +1,15 @@
+fastapi>=0.115
+uvicorn[standard]>=0.32
+pydantic-settings>=2.6
+chromadb>=0.5
+sentence-transformers>=3.3
+requests>=2.32
+yfinance>=0.2.50
+torch>=2.4
+transformers>=4.46
+peft>=0.13
+bitsandbytes>=0.44
+accelerate>=1.0
+datasets>=3.0
+python-dotenv>=1.0
+pytest>=8.3

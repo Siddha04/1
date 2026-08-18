@@ -1,0 +1,47 @@
+name: Fine-tune on fresh data
+
+on:
+  schedule:
+    - cron: "0 3 * * 0"   # weekly — fine-tuning is expensive; don't run this every 15 min
+  workflow_dispatch: {}
+
+jobs:
+  train:
+    # Needs an actual GPU — GitHub-hosted runners don't have one. Point
+    # this at a self-hosted GPU runner, or swap this job for a step that
+    # triggers a cloud GPU job (RunPod / Lambda / a scheduled Colab run)
+    # instead.
+    runs-on: [self-hosted, gpu]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: pip install -r backend/requirements.txt
+
+      - name: Build fresh training set from recently ingested data
+        env:
+          PYTHONPATH: backend
+        run: python -m app.training.dataset_builder
+
+      - name: Fine-tune LoRA adapter
+        env:
+          PYTHONPATH: backend
+        run: python -m app.training.train_lora --output models/adapters/candidate
+
+      - name: Evaluate candidate adapter
+        env:
+          PYTHONPATH: backend
+        run: python -m app.training.evaluate --adapter models/adapters/candidate
+
+      - name: Promote if evaluation passed
+        env:
+          PYTHONPATH: backend
+        run: python -m app.training.promote_adapter
+
+      - name: Commit promoted adapter pointer
+        run: |
+          git config user.name "rag-bot"
+          git config user.email "rag-bot@users.noreply.github.com"
+          git add models/adapters
+          git commit -m "chore: promote new fine-tuned adapter [skip ci]" || true
+          git push
